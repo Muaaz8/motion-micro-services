@@ -1,0 +1,52 @@
+version: '3.8'
+
+networks:
+  motion:
+    driver: bridge
+
+services:
+
+  # ─── API GATEWAY ───────────────────────────────────────────
+  gateway:
+    build: ./api-gateway
+    container_name: motion_gateway
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./api-gateway:/var/www
+    ports:
+      - "8080:8000"
+    command: php artisan serve --host=0.0.0.0 --port=8000
+    networks:
+      - motion
+
+  # ─── AUTH SERVICE ──────────────────────────────────────────
+  auth-service:
+    build: ./auth-service
+    container_name: motion_auth
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./auth-service:/var/www
+    command: php artisan serve --host=0.0.0.0 --port=8000
+    networks:
+      - motion
+
+  auth-db:
+    image: mysql:8.0
+    container_name: motion_auth_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: auth_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - auth_db_data:/var/lib/mysql
+    networks:
+      - motion
+
+volumes:
+  auth_db_data:
