@@ -6,9 +6,10 @@ networks:
 
 services:
 
-  # ─── API GATEWAY ───────────────────────────────────────────
   gateway:
-    build: ./api-gateway
+    build: 
+      context: ./api-gateway
+      dockerfile: Dockerfile
     container_name: motion_gateway
     restart: unless-stopped
     working_dir: /var/www
@@ -16,31 +17,47 @@ services:
       - ./api-gateway:/var/www
     ports:
       - "8080:8000"
+    # environment:
+    #   AUTH_SERVICE_URL: http://auth-service:8000
+    #   EVENT_SERVICE_URL: http://event-service:8002
+    #   KIOSK_SERVICE_URL: http://kiosk-service:8003
+    #   TOURNAMENT_SERVICE_URL: http://tournament-service:8004
+    env_file:
+      - ./api-gateway/.env
     command: php artisan serve --host=0.0.0.0 --port=8000
     networks:
       - motion
 
   # ─── AUTH SERVICE ──────────────────────────────────────────
   auth-service:
-    build: ./auth-service
+    build: 
+      context: ./auth-service
+      dockerfile: Dockerfile
     container_name: motion_auth
     restart: unless-stopped
     working_dir: /var/www
+    env_file:
+      - ./auth-service/.env
+    ports:
+      - "8001:8000"
     volumes:
       - ./auth-service:/var/www
     command: php artisan serve --host=0.0.0.0 --port=8000
     networks:
       - motion
 
+  # ─── AUTH DB ───────────────────────────────────────────────
   auth-db:
     image: mysql:8.0
     container_name: motion_auth_db
     restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: auth_db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+    # environment:
+    #   MYSQL_ROOT_PASSWORD: root
+    #   MYSQL_DATABASE: auth_db
+    #   MYSQL_USER: user
+    #   MYSQL_PASSWORD: password
+    env_file:
+      - ./auth-service/.env
     ports:
       - "3306:3306"
     volumes:
@@ -48,5 +65,57 @@ services:
     networks:
       - motion
 
+  # ─── EVENT SERVICE ─────────────────────────────────────────
+  event-service:
+    build: 
+      context: ./event-service
+      dockerfile: Dockerfile
+    container_name: motion_event
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./event-service:/var/www
+    ports:
+      - "8002:8002"
+    # environment:
+      # APP_ENV: local
+      # APP_DEBUG: "true"
+      # APP_KEY: base64:kXa1tSVBmOZmBcD3e7Xv5RqN2pLwYuJhFgTiKdQnPsE=
+      # DB_CONNECTION: mysql
+      # DB_HOST: event-db
+      # DB_PORT: 3306
+      # DB_DATABASE: motion_event_db
+      # DB_USERNAME: motion
+      # DB_PASSWORD: secret
+      # AUTH_SERVICE_URL: http://auth-service:8000
+    env_file:
+      - ./event-service/.env
+    command: sh -c "php artisan migrate --force && php -S 0.0.0.0:8002 -t public"
+    depends_on:
+      - event-db
+      - auth-service
+    networks:
+      - motion
+
+  # ─── EVENT DB ──────────────────────────────────────────────
+  event-db:
+    image: mysql:8.0
+    container_name: motion_event_db
+    restart: unless-stopped
+    # environment:
+    #   MYSQL_ROOT_PASSWORD: root
+    #   MYSQL_DATABASE: motion_event_db
+    #   MYSQL_USER: motion
+    #   MYSQL_PASSWORD: secret
+    env_file:
+      - ./event-service/.env
+    ports:
+      - "3307:3306"      # 3307 on host to avoid clash with auth-db on 3306
+    volumes:
+      - event_db_data:/var/lib/mysql
+    networks:
+      - motion
+
 volumes:
   auth_db_data:
+  event_db_data:

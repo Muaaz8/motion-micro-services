@@ -15,7 +15,6 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $credentials = $request->only('email', 'password');
-
         if (! $token = auth('api')->attempt($credentials)) {
             return response()->json([
                 'success' => false,

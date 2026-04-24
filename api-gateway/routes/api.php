@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProxyController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\RoleController;
 
 // Auth routes — no token validation needed (login, register etc.)
 Route::any('/auth/{path?}', [ProxyController::class, 'forward'])
@@ -24,3 +25,15 @@ Route::middleware('auth.gateway')->group(function () {
         ->where('path', '.*');
 
 });
+// Role management — admin only
+Route::prefix('roles')->middleware('jwt.auth')->group(function () {
+    Route::get('/',                [RoleController::class, 'index']);
+    Route::post('/',               [RoleController::class, 'store']);
+    Route::get('/{id}',            [RoleController::class, 'show']);
+    Route::put('/{id}',            [RoleController::class, 'update']);
+    Route::delete('/{id}',         [RoleController::class, 'destroy']);
+    Route::post('/{id}/assign',    [RoleController::class, 'assign']);
+    Route::post('/{id}/revoke',    [RoleController::class, 'revoke']);
+});
+
+Route::get('/permissions', [RoleController::class, 'permissions'])->middleware('jwt.auth');
