@@ -19,7 +19,7 @@ class AuthenticateRequest
 
         // Call auth-service to validate the token
         $authResponse = Http::withToken($token)
-            ->post(config('services.auth.url') . '/api/auth/validate-token');
+            ->post(config('services.auth.url') . '/api/token/validate');
 
         if (!$authResponse->ok()) {
             return response()->json(['message' => 'Unauthorized'], 401);
